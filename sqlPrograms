@@ -1,0 +1,55 @@
+1. Find the second highest salary without using LIMIT, OFFSET, or TOP.
+
+SELECT MAX(salary) AS second_highest_salary
+FROM employees
+WHERE salary < (SELECT MAX(salary) FROM employees);
+
+
+SELECT * 
+FROM your_table
+ORDER BY your_column DESC
+LIMIT 1 OFFSET 1;
+
+2. Running total (cumulative sum) of revenue for each day
+
+SELECT order_date, revenue,
+       SUM(revenue) OVER (ORDER BY order_date) AS running_total
+FROM orders;
+order_date	revenue	running_total
+2025-04-01	100	    100
+2025-04-02	200	    300
+2025-04-03	150	    450
+2025-04-04	300	    750
+2025-04-05	250	    1000
+
+3. Employees who earn more than their managers.
+
+  SELECT e.employee_id, e.name, e.salary
+FROM employees e
+JOIN employees m ON e.manager_id = m.employee_id
+WHERE e.salary > m.salary;
+
+4. Top N customers with the highest purchases (ensuring no duplicates).
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
