@@ -1,55 +1,242 @@
-1. Find the second highest salary without using LIMIT, OFFSET, or TOP.
+Here are the optimized SQL queries for your questions:
 
+---
+
+### **1. Find the second highest salary without using `LIMIT`, `OFFSET`, or `TOP`.**
+```sql
 SELECT MAX(salary) AS second_highest_salary
 FROM employees
 WHERE salary < (SELECT MAX(salary) FROM employees);
+```
 
+---
 
-SELECT * 
-FROM your_table
-ORDER BY your_column DESC
-LIMIT 1 OFFSET 1;
-
-2. Running total (cumulative sum) of revenue for each day
-
+### **2. Running total (cumulative sum) of revenue for each day.**
+```sql
 SELECT order_date, revenue,
        SUM(revenue) OVER (ORDER BY order_date) AS running_total
 FROM orders;
-order_date	revenue	running_total
-2025-04-01	100	    100
-2025-04-02	200	    300
-2025-04-03	150	    450
-2025-04-04	300	    750
-2025-04-05	250	    1000
+```
 
-3. Employees who earn more than their managers.
+---
 
-  SELECT e.employee_id, e.name, e.salary
+### **3. Employees who earn more than their managers.**
+```sql
+SELECT e.employee_id, e.name, e.salary
 FROM employees e
 JOIN employees m ON e.manager_id = m.employee_id
 WHERE e.salary > m.salary;
+```
 
-4. Top N customers with the highest purchases (ensuring no duplicates).
-  
+---
 
+### **4. Top N customers with the highest purchases (ensuring no duplicates).**
+```sql
+SELECT customer_id, total_purchase
+FROM (
+    SELECT customer_id, SUM(amount) AS total_purchase,
+           DENSE_RANK() OVER (ORDER BY SUM(amount) DESC) AS rnk
+    FROM purchases
+    GROUP BY customer_id
+) ranked
+WHERE rnk <= N;
+```
 
+---
 
+### **5. Identify consecutive login streaks (at least 3 consecutive days).**
+```sql
+SELECT user_id, login_date, COUNT(*) AS streak_length
+FROM (
+    SELECT user_id, login_date,
+           login_date - INTERVAL ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY login_date) DAY AS streak_group
+    FROM logins
+) grouped
+GROUP BY user_id, streak_group
+HAVING COUNT(*) >= 3;
+```
 
+---
 
+### **6. Detect and delete duplicate records, keeping one copy.**
+```sql
+DELETE FROM employees
+WHERE id NOT IN (
+    SELECT MIN(id)
+    FROM employees
+    GROUP BY name, department, salary
+);
+```
 
+---
 
+### **7. Optimizing slow queries with joins and aggregations.**
+- Create **indexes** on frequently joined columns.
+- Use **partitioning** for large datasets.
+- Optimize with **materialized views** or **indexed views**.
+- Replace **`JOIN` with EXISTS** when filtering data.
+- Use **appropriate indexing strategies** (clustered/non-clustered).
 
+---
 
+### **8. Retrieve the first order for each customer (handling ties correctly).**
+```sql
+SELECT customer_id, order_id, order_date
+FROM (
+    SELECT customer_id, order_id, order_date,
+           RANK() OVER (PARTITION BY customer_id ORDER BY order_date) AS rnk
+    FROM orders
+) ranked
+WHERE rnk = 1;
+```
 
+---
 
+### **9. Find products never purchased by any customer.**
+```sql
+SELECT p.product_id, p.product_name
+FROM products p
+LEFT JOIN orders o ON p.product_id = o.product_id
+WHERE o.product_id IS NULL;
+```
 
+---
 
+### **10. Customers who made transactions in every month of the year.**
+```sql
+SELECT customer_id
+FROM transactions
+WHERE EXTRACT(YEAR FROM transaction_date) = '2024'
+GROUP BY customer_id
+HAVING COUNT(DISTINCT EXTRACT(MONTH FROM transaction_date)) = 12;
+```
 
+---
 
+### **11. Employees with the same salary as another employee in the same department.**
+```sql
+SELECT e1.*
+FROM employees e1
+JOIN employees e2 ON e1.department_id = e2.department_id AND e1.salary = e2.salary
+WHERE e1.employee_id <> e2.employee_id;
+```
 
+---
 
+### **12. Department with the highest total salary.**
+```sql
+SELECT department_id, SUM(salary) AS total_salary
+FROM employees
+GROUP BY department_id
+ORDER BY total_salary DESC
+LIMIT 1;
+```
 
+---
 
+### **13. Rank orders for each customer, returning only the top 3.**
+```sql
+SELECT customer_id, order_id, order_value
+FROM (
+    SELECT customer_id, order_id, order_value,
+           RANK() OVER (PARTITION BY customer_id ORDER BY order_value DESC) AS rnk
+    FROM orders
+) ranked
+WHERE rnk <= 3;
+```
 
+---
 
+### **14. Median salary without using built-in median functions.**
+```sql
+SELECT AVG(salary) AS median_salary
+FROM (
+    SELECT salary
+    FROM employees
+    ORDER BY salary
+    LIMIT 2 - (SELECT COUNT(*) FROM employees) % 2 OFFSET (SELECT COUNT(*) FROM employees) / 2
+);
+```
 
+---
+
+### **15. Pivot table: Transform sales transactions into a summary by month.**
+```sql
+SELECT customer_id,
+       SUM(CASE WHEN MONTH(sale_date) = 1 THEN amount ELSE 0 END) AS Jan,
+       SUM(CASE WHEN MONTH(sale_date) = 2 THEN amount ELSE 0 END) AS Feb,
+       SUM(CASE WHEN MONTH(sale_date) = 3 THEN amount ELSE 0 END) AS Mar
+FROM sales
+GROUP BY customer_id;
+```
+
+---
+
+### **16. Moving average of sales for the last 7 days per product.**
+```sql
+SELECT product_id, sale_date, 
+       AVG(amount) OVER (PARTITION BY product_id ORDER BY sale_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS moving_avg
+FROM sales;
+```
+
+---
+
+### **17. First and last occurrence of each event per user.**
+```sql
+SELECT user_id, event_type,
+       MIN(event_time) AS first_occurrence,
+       MAX(event_time) AS last_occurrence
+FROM events
+GROUP BY user_id, event_type;
+```
+
+---
+
+### **18. Users who placed orders in two consecutive months but not the third.**
+```sql
+SELECT DISTINCT o1.user_id
+FROM orders o1
+JOIN orders o2 ON o1.user_id = o2.user_id AND MONTH(o1.order_date) = MONTH(o2.order_date) - 1
+LEFT JOIN orders o3 ON o1.user_id = o3.user_id AND MONTH(o3.order_date) = MONTH(o2.order_date) + 1
+WHERE o3.user_id IS NULL;
+```
+
+---
+
+### **19. Most frequently purchased product category by each user over the past year.**
+```sql
+SELECT user_id, category, purchases
+FROM (
+    SELECT user_id, category, COUNT(*) AS purchases,
+           RANK() OVER (PARTITION BY user_id ORDER BY COUNT(*) DESC) AS rnk
+    FROM orders
+    WHERE order_date >= NOW() - INTERVAL '1 YEAR'
+    GROUP BY user_id, category
+) ranked
+WHERE rnk = 1;
+```
+
+---
+
+### **20. Rank products based on total sales, resetting the ranking per year.**
+```sql
+SELECT year, product_id, total_sales,
+       RANK() OVER (PARTITION BY year ORDER BY total_sales DESC) AS rank
+FROM (
+    SELECT YEAR(sale_date) AS year, product_id, SUM(amount) AS total_sales
+    FROM sales
+    GROUP BY year, product_id
+) yearly_sales;
+```
+
+---
+
+### **🔥 Key SQL Concepts Used:**
+✅ **`JOIN`** - Combining multiple tables.  
+✅ **`GROUP BY`** - Aggregations (e.g., SUM, COUNT).  
+✅ **`WINDOW FUNCTIONS`** - `RANK()`, `SUM() OVER()`, `DENSE_RANK()`.  
+✅ **`PARTITION BY`** - Resetting rank for each category.  
+✅ **`HAVING`** - Filtering grouped results.  
+✅ **`LEFT JOIN` + `IS NULL`** - Finding missing records.  
+
+Would you like any modifications or additional explanations? 😊
